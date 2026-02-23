@@ -1,24 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/note.dart';
 import '../services/note_service.dart';
 
-class HomeScreen extends StatelessWidget {
-  HomeScreen({super.key});
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
 
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
   final NoteService _noteService = NoteService();
   final TextEditingController _controller = TextEditingController();
 
-  void _addNote() {
-    if (_controller.text.isEmpty) return;
+  Future<void> _addNote() async {
+    if (_controller.text.trim().isEmpty) return;
 
     final note = Note(
       id: '',
-      title: _controller.text,
+      title: _controller.text.trim(),
       content: '',
-      createdAt: DateTime.now(),
+      createdAt: Timestamp.now(),
     );
 
-    _noteService.addNote(note);
+    await _noteService.addNote(note);
     _controller.clear();
   }
 
@@ -43,7 +49,7 @@ class HomeScreen extends StatelessWidget {
                 IconButton(
                   icon: const Icon(Icons.add),
                   onPressed: _addNote,
-                )
+                ),
               ],
             ),
           ),
@@ -51,8 +57,12 @@ class HomeScreen extends StatelessWidget {
             child: StreamBuilder<List<Note>>(
               stream: _noteService.getNotes(),
               builder: (context, snapshot) {
-                if (!snapshot.hasData) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
+                }
+
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(child: Text('No hay notas'));
                 }
 
                 final notes = snapshot.data!;
@@ -65,8 +75,8 @@ class HomeScreen extends StatelessWidget {
                       title: Text(note.title),
                       trailing: IconButton(
                         icon: const Icon(Icons.delete),
-                        onPressed: () {
-                          _noteService.deleteNote(note.id);
+                        onPressed: () async {
+                          await _noteService.deleteNote(note.id);
                         },
                       ),
                     );

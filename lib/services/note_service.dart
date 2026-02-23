@@ -14,10 +14,10 @@ class NoteService {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        return Note.fromMap(doc.data(), doc.id);
-      }).toList();
-    });
+          return snapshot.docs
+              .map((doc) => Note.fromMap(doc.data(), doc.id))
+              .toList();
+        });
   }
 
   Future<void> deleteNote(String id) async {

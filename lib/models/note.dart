@@ -1,8 +1,10 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class Note {
   final String id;
   final String title;
   final String content;
-  final DateTime createdAt;
+  final Timestamp createdAt;
 
   Note({
     required this.id,
@@ -24,7 +26,7 @@ class Note {
       id: id,
       title: map['title'] ?? '',
       content: map['content'] ?? '',
-      createdAt: map['createdAt'].toDate(),
+      createdAt: map['createdAt'] as Timestamp,
     );
   }
 }
