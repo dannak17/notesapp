@@ -4,19 +4,22 @@ class Note {
   final String id;
   final String title;
   final String content;
-  final Timestamp createdAt;
+  final String? imageUrl;
+  final DateTime? createdAt;
 
   Note({
     required this.id,
     required this.title,
     required this.content,
-    required this.createdAt,
+    this.imageUrl,
+    this.createdAt,
   });
 
   Map<String, dynamic> toMap() {
     return {
       'title': title,
       'content': content,
+      'imageUrl': imageUrl,
       'createdAt': createdAt,
     };
   }
@@ -26,7 +29,8 @@ class Note {
       id: id,
       title: map['title'] ?? '',
       content: map['content'] ?? '',
-      createdAt: map['createdAt'] as Timestamp,
+      imageUrl: map['imageUrl'],
+      createdAt: (map['createdAt'] as Timestamp?)?.toDate(),
     );
   }
 }

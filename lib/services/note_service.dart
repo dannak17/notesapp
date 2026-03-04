@@ -5,12 +5,10 @@ import '../models/note.dart';
 class NoteService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+
   Future<void> addNote(Note note) async {
     final user = _auth.currentUser;
-
-    if (user == null) {
-      throw Exception("Usuario no autenticado");
-    }
+    if (user == null) throw Exception("Usuario no autenticado");
 
     await _db.collection('notes').add({
       ...note.toMap(),
@@ -21,10 +19,7 @@ class NoteService {
 
   Stream<List<Note>> getNotes() {
     final user = _auth.currentUser;
-
-    if (user == null) {
-      throw Exception("Usuario no autenticado");
-    }
+    if (user == null) throw Exception("Usuario no autenticado");
 
     return _db
         .collection('notes')
