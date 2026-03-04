@@ -15,7 +15,6 @@ class Note {
     required this.createdAt,
   });
 
-  // 🔥 Convierte Note → Map para guardar en Firestore
   Map<String, dynamic> toMap() {
     return {
       'title': title,
@@ -25,7 +24,6 @@ class Note {
     };
   }
 
-  // 🔥 Convierte Firestore → Note
   factory Note.fromMap(Map<String, dynamic> map, String id) {
     return Note(
       id: id,

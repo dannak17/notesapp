@@ -16,7 +16,7 @@ class NoteService {
     await _db.collection('notes').add({
       ...note.toMap(),
       'userId': user.uid,
-      'createdAt': FieldValue.serverTimestamp(), // 🔥 FIX
+      'createdAt': FieldValue.serverTimestamp(), 
     });
   }
 
