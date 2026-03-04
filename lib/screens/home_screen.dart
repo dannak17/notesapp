@@ -1,3 +1,4 @@
+import '../services/ai_service.dart';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -17,13 +18,13 @@ class _HomeScreenState extends State<HomeScreen> {
   final NoteService _noteService = NoteService();
   final StorageService _storageService = StorageService();
   final AuthService _authService = AuthService();
+  final AIService _aiService = AIService();
 
   final TextEditingController _title = TextEditingController();
   final TextEditingController _content = TextEditingController();
 
   Uint8List? _selectedImage;
 
-  /// 📸 Seleccionar imagen (compatible con Web)
   Future<void> _pickImage() async {
     final picked =
         await ImagePicker().pickImage(source: ImageSource.gallery);
@@ -36,8 +37,9 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  /// 💾 Guardar nota con imagen opcional
   Future<void> _addNote() async {
+    if (_title.text.isEmpty || _content.text.isEmpty) return;
+
     String? imageUrl;
 
     if (_selectedImage != null) {
@@ -46,8 +48,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final note = Note(
       id: '',
-      title: _title.text,
-      content: _content.text,
+      title: _title.text.trim(),
+      content: _content.text.trim(),
       imageUrl: imageUrl,
       createdAt: DateTime.now(),
     );
@@ -60,6 +62,34 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _selectedImage = null;
     });
+  }
+
+  Future<void> _resumirNota(String texto) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
+    final resumen = await _aiService.resumirTexto(texto);
+
+    Navigator.pop(context);
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("summary generate by IA"),
+        content: Text(resumen ?? "Cannot generate summary."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cerrar"),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -76,24 +106,36 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: Column(
         children: [
-          /// 🔹 FORMULARIO
+        
           Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
               children: [
                 TextField(
                   controller: _title,
-                  decoration: const InputDecoration(labelText: "Título"),
+                  decoration: const InputDecoration(
+                    labelText: "Título",
+                    border: OutlineInputBorder(),
+                  ),
                 ),
+                const SizedBox(height: 10),
                 TextField(
                   controller: _content,
-                  decoration: const InputDecoration(labelText: "Contenido"),
+                  decoration: const InputDecoration(
+                    labelText: "Contenido",
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
                 ),
                 const SizedBox(height: 10),
 
-                /// Mostrar imagen seleccionada antes de subir
                 if (_selectedImage != null)
-                  Image.memory(_selectedImage!, height: 120),
+                  Column(
+                    children: [
+                      Image.memory(_selectedImage!, height: 120),
+                      const SizedBox(height: 8),
+                    ],
+                  ),
 
                 Row(
                   children: [
@@ -101,6 +143,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       icon: const Icon(Icons.image),
                       onPressed: _pickImage,
                     ),
+                    const SizedBox(width: 10),
                     ElevatedButton(
                       onPressed: _addNote,
                       child: const Text("Guardar"),
@@ -111,22 +154,25 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
 
-          /// 🔹 LISTA DE NOTAS
           Expanded(
             child: StreamBuilder<List<Note>>(
               stream: _noteService.getNotes(),
               builder: (context, snapshot) {
-                if (!snapshot.hasData) {
+
+                if (snapshot.connectionState ==
+                    ConnectionState.waiting) {
                   return const Center(
-                      child: CircularProgressIndicator());
+                    child: CircularProgressIndicator(),
+                  );
+                }
+
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(
+                    child: Text("No hay notas aún"),
+                  );
                 }
 
                 final notes = snapshot.data!;
-
-                if (notes.isEmpty) {
-                  return const Center(
-                      child: Text("No hay notas aún"));
-                }
 
                 return ListView.builder(
                   itemCount: notes.length,
@@ -135,28 +181,58 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     return Card(
                       margin: const EdgeInsets.all(8),
-                      child: ListTile(
-                        title: Text(note.title),
-                        subtitle: Column(
+                      elevation: 3,
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
                           crossAxisAlignment:
                               CrossAxisAlignment.start,
                           children: [
+                            Text(
+                              note.title,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
                             Text(note.content),
+                            const SizedBox(height: 8),
+
                             if (note.imageUrl != null)
-                              Padding(
-                                padding:
-                                    const EdgeInsets.only(top: 8),
+                              ClipRRect(
+                                borderRadius:
+                                    BorderRadius.circular(8),
                                 child: Image.network(
                                   note.imageUrl!,
                                   height: 120,
+                                  fit: BoxFit.cover,
                                 ),
                               ),
+
+                            const SizedBox(height: 10),
+
+                            Row(
+                              mainAxisAlignment:
+                                  MainAxisAlignment.spaceBetween,
+                              children: [
+                                ElevatedButton(
+                                  onPressed: () =>
+                                      _resumirNota(
+                                          note.content),
+                                  child: const Text(
+                                      "Resumir con IA"),
+                                ),
+                                IconButton(
+                                  icon:
+                                      const Icon(Icons.delete),
+                                  onPressed: () =>
+                                      _noteService
+                                          .deleteNote(note.id),
+                                ),
+                              ],
+                            ),
                           ],
-                        ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete),
-                          onPressed: () =>
-                              _noteService.deleteNote(note.id),
                         ),
                       ),
                     );
@@ -164,7 +240,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               },
             ),
-          )
+          ),
         ],
       ),
     );

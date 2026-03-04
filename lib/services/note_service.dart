@@ -8,18 +8,24 @@ class NoteService {
 
   Future<void> addNote(Note note) async {
     final user = _auth.currentUser;
-    if (user == null) throw Exception("Usuario no autenticado");
+
+    if (user == null) {
+      throw Exception("Usuario no autenticado");
+    }
 
     await _db.collection('notes').add({
       ...note.toMap(),
       'userId': user.uid,
-      'createdAt': FieldValue.serverTimestamp(),
+      'createdAt': FieldValue.serverTimestamp(), // 🔥 FIX
     });
   }
 
   Stream<List<Note>> getNotes() {
     final user = _auth.currentUser;
-    if (user == null) throw Exception("Usuario no autenticado");
+
+    if (user == null) {
+      return const Stream.empty();
+    }
 
     return _db
         .collection('notes')
@@ -27,9 +33,9 @@ class NoteService {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
-          .map((doc) => Note.fromMap(doc.data(), doc.id))
-          .toList();
+      return snapshot.docs.map((doc) {
+        return Note.fromMap(doc.data(), doc.id);
+      }).toList();
     });
   }
 
